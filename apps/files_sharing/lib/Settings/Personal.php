@@ -25,6 +25,7 @@ declare(strict_types=1);
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
 namespace OCA\Files_Sharing\Settings;
 
 use OCA\Files_Sharing\AppInfo\Application;
@@ -56,6 +57,8 @@ class Personal implements ISettings {
 		$allowCustomDirectory = $this->config->getSystemValueBool('sharing.allow_custom_share_folder', true);
 		$shareFolderDefault = $this->config->getUserValue($this->userId, Application::APP_ID, 'share_folder', $shareFolderSystemConfig);
 		$this->initialState->provideInitialState('accept_default', $acceptDefault);
+		$this->initialState->provideInitialState('is_group_admin', (bool)$this->groupAdmin());
+		$this->initialState->provideInitialState('federation_shares', $this->getFederationShares());
 		$this->initialState->provideInitialState('enforce_accept', $enforceAccept);
 		$this->initialState->provideInitialState('allow_custom_share_folder', $allowCustomDirectory);
 		$this->initialState->provideInitialState('share_folder', $shareFolderDefault);
@@ -69,5 +72,43 @@ class Personal implements ISettings {
 
 	public function getPriority(): int {
 		return 90;
+	}
+
+	private function groupAdmin() {
+		$connection = \OC::$server->get(\OCP\IDBConnection::class);
+		return $connection->getQueryBuilder()->select("*")
+			->from("group_admin")
+			->where("uid = :uid")
+			->setParameter("uid", $this->userId)
+			->execute()
+			->fetch();
+
+	}
+
+	private function getFederationShares() {
+		$connection = \OC::$server->get(\OCP\IDBConnection::class);
+		$groupAdmin = $this->groupAdmin();
+		$federationShares = [];
+		if ((bool)$groupAdmin) {
+			$groupId = $groupAdmin['gid'];
+			$groupUsers = $connection->getQueryBuilder()->select("*")
+				->from("group_user")
+				->where("gid = :gid")
+				->setParameter("gid", $groupId)
+				->execute()
+				->fetchAll();
+			$groupUsersUids = array_column($groupUsers, "uid");
+
+			$externalSharesList = $connection->getQueryBuilder()->select("*")
+				->from("share_external_list")
+				->executeQuery()
+				->fetchAll();
+			foreach ($externalSharesList as $item) {
+				if (in_array($item['from'], $groupUsersUids)) {
+					$federationShares[] = $item;
+				};
+			}
+		}
+		return $federationShares;
 	}
 }

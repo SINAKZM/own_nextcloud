@@ -202,5 +202,15 @@ return [
 			'url' => '/api/v1/remote_shares/{id}',
 			'verb' => 'DELETE',
 		],
+		[
+			'name' => 'ShareAPI#approveExternalShare',
+			'url' => '/api/v1/shares/approve_external_share',
+			'verb' => 'POST',
+		],
+		[
+			'name' => 'ShareAPI#rejectExternalShare',
+			'url' => '/api/v1/shares/reject_external_share',
+			'verb' => 'POST',
+		],
 	],
 ];

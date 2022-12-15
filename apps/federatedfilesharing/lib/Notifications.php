@@ -378,12 +378,6 @@ class Notifications {
 		$client = $this->httpClientService->newClient();
 		$federationEndpoints = $this->discoveryService->discover($remoteDomain, 'FEDERATED_SHARING');
 		$endpoint = isset($federationEndpoints['share']) ? $federationEndpoints['share'] : '/ocs/v2.php/cloud/shares';
-		/**
-		 * 9 flag is for group sharing
-		 * target api parses this value in $shareType = $this->mapShareTypeToNextcloud($share->getShareType());
-		 * bug fix group federated sharing
-		 */
-		$fields['shareType'] = $fields['shareType'] == 9 ? 'group' : 'user';
 		try {
 			$response = $client->post($remoteDomain . $endpoint . $urlSuffix . '?format=' . self::RESPONSE_FORMAT, [
 				'body' => $fields,

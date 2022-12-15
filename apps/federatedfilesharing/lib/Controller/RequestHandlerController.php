@@ -136,7 +136,7 @@ class RequestHandlerController extends OCSController {
 		$remoteId = isset($_POST['remoteId']) ? (int)$_POST['remoteId'] : null;
 		$sharedByFederatedId = isset($_POST['sharedByFederatedId']) ? $_POST['sharedByFederatedId'] : null;
 		$ownerFederatedId = isset($_POST['ownerFederatedId']) ? $_POST['ownerFederatedId'] : null;
-
+		$shareType = isset($_POST['shareType']) ? $_POST['shareType'] : null;
 		if ($ownerFederatedId === null) {
 			$ownerFederatedId = $this->cloudIdManager->getCloudId($owner, $this->cleanupRemote($remote))->getId();
 		}
@@ -156,7 +156,7 @@ class RequestHandlerController extends OCSController {
 			$sharedByFederatedId,
 			$sharedBy,
 			$token,
-			'user',
+			$shareType,
 			'file'
 		);
 

@@ -27,6 +27,7 @@ return [
 	'routes' => [
 		['name' => 'MountPublicLink#createFederatedShare', 'url' => '/createFederatedShare', 'verb' => 'POST'],
 		['name' => 'MountPublicLink#askForFederatedShare', 'url' => '/askForFederatedShare', 'verb' => 'POST'],
+		['name' => 'RequestHandler#getConfig', 'url' => '/config', 'verb' => 'GET'],
 	],
 	'ocs' => [
 		['root' => '/cloud', 'name' => 'RequestHandler#createShare', 'url' => '/shares', 'verb' => 'POST'],

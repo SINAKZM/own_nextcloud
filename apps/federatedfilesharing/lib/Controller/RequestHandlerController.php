@@ -49,6 +49,7 @@ use OCP\Log\Audit\CriticalActionPerformedEvent;
 use OCP\Share;
 use OCP\Share\Exceptions\ShareNotFound;
 use Psr\Log\LoggerInterface;
+use OCP\IConfig;
 
 class RequestHandlerController extends OCSController {
 
@@ -87,6 +88,7 @@ class RequestHandlerController extends OCSController {
 
 	/** @var IEventDispatcher */
 	private $eventDispatcher;
+	private IConfig $IConfig;
 
 	public function __construct(string $appName,
 								IRequest $request,
@@ -100,7 +102,8 @@ class RequestHandlerController extends OCSController {
 								LoggerInterface $logger,
 								ICloudFederationFactory $cloudFederationFactory,
 								ICloudFederationProviderManager $cloudFederationProviderManager,
-								IEventDispatcher $eventDispatcher
+								IEventDispatcher $eventDispatcher,
+								IConfig $IConfig
 	) {
 		parent::__construct($appName, $request);
 
@@ -115,6 +118,7 @@ class RequestHandlerController extends OCSController {
 		$this->cloudFederationFactory = $cloudFederationFactory;
 		$this->cloudFederationProviderManager = $cloudFederationProviderManager;
 		$this->eventDispatcher = $eventDispatcher;
+		$this->IConfig = $IConfig;
 	}
 
 	/**
@@ -164,9 +168,9 @@ class RequestHandlerController extends OCSController {
 			$provider = $this->cloudFederationProviderManager->getCloudFederationProvider('file');
 			$provider->shareReceived($share);
 			if ($sharedByFederatedId === $ownerFederatedId) {
-					$this->eventDispatcher->dispatchTyped(new CriticalActionPerformedEvent('A new federated share with "%s" was created by "%s" and shared with "%s"', [$name, $ownerFederatedId, $shareWith]));
+				$this->eventDispatcher->dispatchTyped(new CriticalActionPerformedEvent('A new federated share with "%s" was created by "%s" and shared with "%s"', [$name, $ownerFederatedId, $shareWith]));
 			} else {
-					$this->eventDispatcher->dispatchTyped(new CriticalActionPerformedEvent('A new federated share with "%s" was shared by "%s" (resource owner is: "%s") and shared with "%s"', [$name, $sharedByFederatedId, $ownerFederatedId, $shareWith]));
+				$this->eventDispatcher->dispatchTyped(new CriticalActionPerformedEvent('A new federated share with "%s" was shared by "%s" (resource owner is: "%s") and shared with "%s"', [$name, $sharedByFederatedId, $ownerFederatedId, $shareWith]));
 			}
 		} catch (ProviderDoesNotExistsException $e) {
 			throw new OCSException('Server does not support federated cloud sharing', 503);
@@ -465,5 +469,9 @@ class RequestHandlerController extends OCSController {
 		} else {
 			throw new OCSBadRequestException('Share not found or token invalid');
 		}
+	}
+	public function getConfig() {
+		$value = $this->IConfig->getSystemValue('sharing.force_external_share_accept', false);
+		return new Http\JSONResponse(['result' => $value]);
 	}
 }

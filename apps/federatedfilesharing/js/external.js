@@ -1,3 +1,4 @@
+
 /**
  * Copyright (c) 2014 Robin Appelman <icewind@owncloud.com>
  *
@@ -23,41 +24,53 @@
 	 * @param {Function} callback the callback
 	 */
 	OCA.Sharing.showAddExternalDialog = function(share, passwordProtected, callback) {
-		var remote = share.remote;
-		var owner = share.ownerDisplayName || share.owner;
-		var name = share.name;
-		var remoteClean = (remote.substr(0, 8) === 'https://') ? remote.substr(8) : remote.substr(7);
+		$.get(OC.generateUrl('/apps/federatedfilesharing/config'))
+			.then(data=>{
+				var isForce = data.result;
+				if(isForce){
+					$.post(OC.generateUrl('/apps/files_sharing/api/externalShares'), {id: share.id})
+						.then(function() {
+							OCA.Files.App.fileList.reload();
+						});
+				}else{
+					var remote = share.remote;
+					var owner = share.ownerDisplayName || share.owner;
+					var name = share.name;
+					var remoteClean = (remote.substr(0, 8) === 'https://') ? remote.substr(8) : remote.substr(7);
 
-		if (!passwordProtected) {
-			OC.dialogs.confirm(
-				t(
-					'files_sharing',
-					'Do you want to add the remote share {name} from {owner}@{remote}?',
-					{ name: name, owner: owner, remote: remoteClean }
-				),
-				t('files_sharing', 'Remote share'),
-				function(result) {
-					callback(result, share);
-				},
-				true
-			).then(this._adjustDialog);
-		} else {
-			OC.dialogs.prompt(
-				t(
-					'files_sharing',
-					'Do you want to add the remote share {name} from {owner}@{remote}?',
-					{ name: name, owner: owner, remote: remoteClean }
-				),
-				t('files_sharing', 'Remote share'),
-				function(result, password) {
-					share.password = password;
-					callback(result, share);
-				},
-				true,
-				t('files_sharing', 'Remote share password'),
-				true
-			).then(this._adjustDialog);
-		}
+					if (!passwordProtected) {
+						OC.dialogs.confirm(
+							t(
+								'files_sharing',
+								'Do you want to add the remote share {name} from {owner}@{remote}?',
+								{ name: name, owner: owner, remote: remoteClean }
+							),
+							t('files_sharing', 'Remote share'),
+							function(result) {
+								callback(result, share);
+							},
+							true
+						).then(this._adjustDialog);
+					} else {
+						OC.dialogs.prompt(
+							t(
+								'files_sharing',
+								'Do you want to add the remote share {name} from {owner}@{remote}?',
+								{ name: name, owner: owner, remote: remoteClean }
+							),
+							t('files_sharing', 'Remote share'),
+							function(result, password) {
+								share.password = password;
+								callback(result, share);
+							},
+							true,
+							t('files_sharing', 'Remote share password'),
+							true
+						).then(this._adjustDialog);
+					}
+				}
+			});
+
 	};
 
 	OCA.Sharing._adjustDialog = function() {

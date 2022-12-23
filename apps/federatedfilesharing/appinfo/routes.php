@@ -38,5 +38,6 @@ return [
 		['root' => '/cloud', 'name' => 'RequestHandler#unshare', 'url' => '/shares/{id}/unshare', 'verb' => 'POST'],
 		['root' => '/cloud', 'name' => 'RequestHandler#revoke', 'url' => '/shares/{id}/revoke', 'verb' => 'POST'],
 		['root' => '/cloud', 'name' => 'RequestHandler#move', 'url' => '/shares/{id}/move', 'verb' => 'POST'],
+		['root' => '/cloud', 'name' => 'RequestHandler#checkReceivePermission', 'url' => '/check_receive_permission', 'verb' => 'POST']
 	],
 ];

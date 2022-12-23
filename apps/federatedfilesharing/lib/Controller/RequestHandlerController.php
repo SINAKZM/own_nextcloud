@@ -30,12 +30,15 @@ namespace OCA\FederatedFileSharing\Controller;
 use OCA\FederatedFileSharing\AddressHandler;
 use OCA\FederatedFileSharing\FederatedShareProvider;
 use OCA\FederatedFileSharing\Notifications;
+use OCA\Files_Sharing\ExternalShare;
 use OCP\AppFramework\Http;
+use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\OCS\OCSBadRequestException;
 use OCP\AppFramework\OCS\OCSException;
 use OCP\AppFramework\OCS\OCSForbiddenException;
 use OCP\AppFramework\OCSController;
 use OCP\Constants;
+use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\EventDispatcher\IEventDispatcher;
 use OCP\Federation\Exceptions\ProviderCouldNotAddShareException;
 use OCP\Federation\Exceptions\ProviderDoesNotExistsException;
@@ -473,5 +476,55 @@ class RequestHandlerController extends OCSController {
 	public function getConfig() {
 		$value = $this->IConfig->getSystemValue('sharing.force_external_share_accept', false);
 		return new Http\JSONResponse(['result' => $value]);
+	}
+	/**
+	 * @NoCSRFRequired
+	 * @PublicPage
+	 * @param $uid
+	 * @param $gid
+	 * @return JSONResponse
+	 * @throws \OCP\DB\Exception
+	 */
+	public function checkReceivePermission($uid = null, $gid = null) {
+		$federationShareProvider = \OC::$server->get(FederatedShareProvider::class);
+		if (!$federationShareProvider->isIncomingServer2serverShareEnabled()){
+			return new JSONResponse(['result'=>false]);
+		}
+		$qb = $this->connection->getQueryBuilder();
+		$federationUser = $qb->select("*")
+			->from("federation_users");
+		if ($gid){
+			$result = $federationUser
+				->where("gid = :gid")
+				->andWhere("type = :type")
+				->setParameter("gid", $gid)
+				->setParameter("type", ExternalShare::TYPE_FEDERATION_SHARE_RECEIVER_TYPE)
+				->execute()->fetch();
+			return new JSONResponse(['result'=>(bool)$result]);
+		}
+		if ($uid){
+			$qb = $this->connection->getQueryBuilder();
+			$userGroups = $qb->select('*')
+				->from('group_user')
+				->where($qb->expr()->eq('uid', $qb->createNamedParameter($uid)))
+				->execute()
+				->fetchAll();
+			$gid =array_column($userGroups, 'gid');
+			$qb = $this->connection->getQueryBuilder();
+			$result = $qb->select("*")
+				->from("federation_users")
+				->where(
+					$qb->expr()->orX(
+						$qb->expr()->in('gid', $qb->createNamedParameter($gid, IQueryBuilder::PARAM_STR_ARRAY)),
+						$qb->expr()->eq('uid', $qb->createNamedParameter($uid)),
+					)
+				)
+				->andWhere("type = :type")
+				->setParameter("type", ExternalShare::TYPE_FEDERATION_SHARE_RECEIVER_TYPE)
+				->execute()
+				->fetch();
+			return new JSONResponse(['result'=>(bool)$result]);
+		}
+		return new JSONResponse([]);
 	}
 }

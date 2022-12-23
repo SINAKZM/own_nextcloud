@@ -47,6 +47,7 @@ Turning the feature off removes shared files and folders on the server for all s
 
 	<settings>
 		<personal>OCA\Files_Sharing\Settings\Personal</personal>
+		<admin>OCA\Files_Sharing\Settings\Admin</admin>
 	</settings>
 
 	<activity>

@@ -62,11 +62,13 @@ use OCP\AppFramework\OCS\OCSNotFoundException;
 use OCP\AppFramework\OCSController;
 use OCP\AppFramework\QueryException;
 use OCP\Constants;
+use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\Files\InvalidPathException;
 use OCP\Files\IRootFolder;
 use OCP\Files\Folder;
 use OCP\Files\Node;
 use OCP\Files\NotFoundException;
+use OCP\Http\Client\IClientService;
 use OCP\IConfig;
 use OCP\IDBConnection;
 use OCP\IGroupManager;
@@ -76,6 +78,7 @@ use OCP\IRequest;
 use OCP\IServerContainer;
 use OCP\IURLGenerator;
 use OCP\IUserManager;
+use OCP\IUserSession;
 use OCP\Lock\ILockingProvider;
 use OCP\Lock\LockedException;
 use OCP\Share;
@@ -84,6 +87,7 @@ use OCP\Share\Exceptions\ShareNotFound;
 use OCP\Share\IManager;
 use OCP\Share\IShare;
 use OCP\UserStatus\IManager as IUserStatusManager;
+use Psr\Log\LoggerInterface;
 
 /**
  * Class Share20OCS
@@ -120,6 +124,9 @@ class ShareAPIController extends OCSController {
 	private $previewManager;
 	private IDBConnection $IDBConnection;
 	private ExternalShare $externalShare;
+	private IClientService $clientService;
+	private LoggerInterface $logger;
+	private IUserSession $userSession;
 
 	/**
 	 * Share20OCS constructor.
@@ -154,7 +161,10 @@ class ShareAPIController extends OCSController {
 		IUserStatusManager $userStatusManager,
 		IPreview           $previewManager,
 		IDBConnection      $IDBConnection,
-		ExternalShare $externalShare
+		ExternalShare $externalShare,
+		IClientService $clientService,
+		LoggerInterface $logger,
+		IUserSession $userSession
 	) {
 		parent::__construct($appName, $request);
 
@@ -174,6 +184,9 @@ class ShareAPIController extends OCSController {
 		$this->appName = $appName;
 		$this->IDBConnection = $IDBConnection;
 		$this->externalShare = $externalShare;
+		$this->clientService = $clientService;
+		$this->logger = $logger;
+		$this->userSession = $userSession;
 	}
 
 	/**
@@ -614,8 +627,17 @@ class ShareAPIController extends OCSController {
 				}
 			}
 		} elseif ($shareType === IShare::TYPE_REMOTE || $shareType === IShare::TYPE_REMOTE_GROUP) {
-			$this->submitShareInList($path, $permissions, $shareType, $shareWith, $expireDate, $note);
-			return new DataResponse(["result" => "successfully inserted in list"]);
+			$remoteData = explode('@', $shareWith);
+			$receiver = $remoteData[0];
+			$federationServer = $remoteData[1];
+			if ($this->isReceiverAllowed($shareType, $receiver, $federationServer)){
+				if ($this->isSenderAllowed()){
+					$this->submitShareInList($path, $permissions, $shareType, $shareWith, $expireDate, $note);
+					return new DataResponse(["result"=>"successfully shared"]);
+				}
+				return new DataResponse(["result"=>"sender not allowed"], 401);
+			}
+			return new DataResponse(["result"=>"receiver not allowed"], 401);
 		} elseif ($shareType === IShare::TYPE_CIRCLE) {
 			if (!\OC::$server->getAppManager()->isEnabledForUser('circles') || !class_exists('\OCA\Circles\ShareByCircleProvider')) {
 				throw new OCSNotFoundException($this->l->t('You cannot share to a Circle if the app is not enabled'));
@@ -1879,5 +1901,165 @@ class ShareAPIController extends OCSController {
 				'result' => "success",
 			]
 		);
+	}
+	public function isReceiverAllowed($shareType, $receiver, $federationServer){
+		$fields = [
+			'uid' => $shareType == 6 ? $receiver : null,
+			'gid' => $shareType == 9 ? $receiver : null,
+		];
+		$client = $this->clientService->newClient();
+		try {
+			$response = $client->post($federationServer. "/ocs/v2.php/cloud/check_receive_permission", [
+				'body' => $fields,
+				'timeout' => 10,
+				'connect_timeout' => 10,
+			]);
+			$result = json_decode($response->getBody(), true);
+			return $result['result'];
+		} catch (\Exception $e) {
+			$this->logger->error("CURL EXCEPTION", ['app' => 'files_sharing']);
+			$this->logger->error($e->getMessage(), ['app' => 'files_sharing']);
+		}
+		return false;
+	}
+
+	public function isSenderAllowed() {
+		$federationShareProvider = \OC::$server->get(FederatedShareProvider::class);
+		if (!$federationShareProvider->isOutgoingServer2serverShareEnabled()){
+			return false;
+		}
+		$groups  = $this->getGroupsOfCurrentUser();
+		$qb = $this->IDBConnection->getQueryBuilder();
+		return (bool)$qb->select("*")
+			->from("federation_users")
+			->where(
+				$qb->expr()->orX(
+					$qb->expr()->in('gid', $qb->createNamedParameter(array_values(array_column($groups, 'gid')), IQueryBuilder::PARAM_STR_ARRAY)),
+					$qb->expr()->eq('uid', $qb->createNamedParameter($this->userSession->getUser()->getUID())),
+				)
+			)
+			->andWhere("type = :type")
+			->setParameter('type',ExternalShare::TYPE_FEDERATION_SHARE_SENDER_TYPE)
+			->execute()
+			->fetch();
+	}
+	public function storeFederationUser($type, $gid = null, $uid = null) {
+		$qb = $this->IDBConnection->getQueryBuilder();
+		$federationUser = $qb->select("*")
+			->from("federation_users")
+			->where("type = :type");
+		if ($gid) {
+			$federationUser->andWhere("gid LIKE :identification");
+		} else {
+			$federationUser->andWhere("uid LIKE :identification");
+		}
+		$federationUserExist=$federationUser
+			->setParameter("identification", '%' . $gid ? $gid : $uid . '%')
+			->setParameter("type", $type)
+			->execute()
+			->fetchOne();
+		if (!$federationUserExist) {
+			$qb->insert('federation_users')
+				->values(
+					[
+						'type' => '?',
+						'gid' => '?',
+						'uid' => '?'
+					]
+				)
+				->setParameter(0, $type)
+				->setParameter(1, $gid)
+				->setParameter(2, $uid)
+				->executeStatement();
+
+			return new JSONResponse(
+				[
+					'result' => "success"
+				]
+			);
+		}
+		return new JSONResponse(
+			[
+				'result' => "already existed"
+			]
+		);
+
+	}
+
+	public function removeFederationUser($type, $uid = null, $gid = null) {
+		$query = $this->IDBConnection->getQueryBuilder();
+		$parameters = ['type' => (int)$type];
+		$query->delete('federation_users', 'fu')
+			->where("type = :type");
+		if ($uid) {
+			$query->andWhere("uid = :uid");
+			$parameters['uid'] = $uid;
+		} else {
+			$query->andWhere("gid = :gid");
+			$parameters['gid'] = $gid;
+		}
+		$query->setParameters($parameters)->executeStatement();
+		return new JSONResponse(
+			[
+				'result' => "success"
+			]
+		);
+	}
+
+	public function indexFederationUser($type, $is_group) {
+		$qb = $this->IDBConnection->getQueryBuilder();
+		$query = $qb->select('*')
+			->where("type = :type")
+			->from("federation_users", 'fu')
+			->setParameter('type', $type);
+		if ($is_group) {
+			$query->andWhere('gid IS NOT NULL');
+		} else {
+			$query->andWhere('fu.uid IS NOT NULL');
+		}
+		$result = $query->execute()
+			->fetchAll();
+		return new JSONResponse(
+			[
+				'result' => $result
+			]
+		);
+	}
+	public function groupSearch($search) {
+		$groups = $this->IDBConnection->getQueryBuilder()
+			->select("*")
+			->from("groups")
+			->where("displayname LIKE :display_name")
+			->setParameter("display_name", '%' . $search . '%')
+			->execute()
+			->fetchAll();
+		return new JSONResponse(
+			[
+				'result' => $groups
+			]
+		);
+	}
+
+	public function userSearch($search) {
+		$users = $this->IDBConnection->getQueryBuilder()
+			->select("*")
+			->from("users")
+			->where("uid LIKE :uid")
+			->setParameter("uid", '%' . $search . '%')
+			->execute()
+			->fetchAll();
+		return new JSONResponse(
+			[
+				'result' => $users
+			]
+		);
+	}
+	private function getGroupsOfCurrentUser() {
+		$qb = $this->IDBConnection->getQueryBuilder();
+		return $qb->select('gid')
+			->from('group_user')
+			->where($qb->expr()->eq('uid', $qb->createNamedParameter($this->currentUser)))
+			->execute()
+			->fetchAll();
 	}
 }

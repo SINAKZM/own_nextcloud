@@ -28,7 +28,8 @@ use OCP\Share\IShare;
  * @package OCA\Files_Sharing\API
  */
 class ExternalShare {
-
+	const TYPE_FEDERATION_SHARE_RECEIVER_TYPE = 0;
+	const TYPE_FEDERATION_SHARE_SENDER_TYPE = 1;
 	/** @var IManager */
 	private $shareManager;
 	/** @var IRootFolder */

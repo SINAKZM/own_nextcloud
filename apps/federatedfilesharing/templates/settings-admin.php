@@ -85,6 +85,27 @@ style('federatedfilesharing', 'settings-admin');
 				<?php p($l->t('Allow users to publish their data to a global and public address book')); ?>
 			</label><br/>
 		</p>
+		<div id="outgoingServer2serverShareEnabledExcludes" style="margin-top: 20px">
+			<p><b>Receiver</b></p>
+			<div id="ReceiveShareGroupPermission">
+				<p>Groups</p>
+				<input type="text" id="ReceiverGroups" style="width: 500px" class="js-example-basic-multiple js-states form-control" value="1,2,3"/>
+			</div>
+			<div id="ReceiveShareUserPermission">
+				<p>Users</p>
+				<input type="text" id="ReceiverUsers" style="width: 500px" class="js-example-basic-multiple js-states form-control" value="4,5,6"/>
+			</div>
+			<p><b>Sender</b></p>
+			<div id="SendShareGroupPermission">
+				<p>Groups</p>
+				<input type="text" id="SenderGroups" style="width: 500px" class="js-example-basic-multiple js-states form-control" value="7,8,9"/>
+			</div>
+			<div id="SendShareUserPermission">
+				<p>Users</p>
+				<input type="text" id="SenderUsers" style="width: 500px" class="js-example-basic-multiple js-states form-control" value="10,11,12"/>
+			</div>
+
+		</div>
 	</div>
 
 <?php endif; ?>

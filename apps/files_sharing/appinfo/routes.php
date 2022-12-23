@@ -212,5 +212,30 @@ return [
 			'url' => '/api/v1/shares/reject_external_share',
 			'verb' => 'POST',
 		],
+		[
+			'name' => 'ShareAPI#storeFederationUser',
+			'url' => '/api/v1/shares/federation_user/store',
+			'verb' => 'POST',
+		],
+		[
+			'name' => 'ShareAPI#removeFederationUser',
+			'url' => '/api/v1/shares/federation_user/remove',
+			'verb' => 'POST',
+		],
+		[
+			'name' => 'ShareAPI#indexFederationUser',
+			'url' => '/api/v1/shares/federation_user/index',
+			'verb' => 'GET',
+		],
+		[
+			'name' => 'ShareAPI#groupSearch',
+			'url' => '/api/v1/shares/group/search',
+			'verb' => 'GET',
+		],
+		[
+			'name' => 'ShareAPI#userSearch',
+			'url' => '/api/v1/shares/user/search',
+			'verb' => 'GET',
+		],
 	],
 ];

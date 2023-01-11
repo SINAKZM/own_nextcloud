@@ -32,6 +32,7 @@ namespace OCA\WorkflowEngine;
 use Doctrine\DBAL\Exception;
 use OC\Cache\CappedMemoryCache;
 use OCA\WorkflowEngine\AppInfo\Application;
+use OCA\WorkflowEngine\Check\Download;
 use OCA\WorkflowEngine\Check\FileMimeType;
 use OCA\WorkflowEngine\Check\FileName;
 use OCA\WorkflowEngine\Check\FileSize;
@@ -48,6 +49,7 @@ use OCA\WorkflowEngine\Service\RuleMatcher;
 use OCP\AppFramework\QueryException;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\EventDispatcher\IEventDispatcher;
+use OCP\Files\IRootFolder;
 use OCP\Files\Storage\IStorage;
 use OCP\IConfig;
 use OCP\IDBConnection;
@@ -120,6 +122,7 @@ class Manager implements IManager {
 
 	/** @var IConfig */
 	private $config;
+	private IRootFolder $rootFolder;
 
 	public function __construct(
 		IDBConnection $connection,
@@ -129,7 +132,8 @@ class Manager implements IManager {
 		ILogger $logger,
 		IUserSession $session,
 		IEventDispatcher $dispatcher,
-		IConfig $config
+		IConfig $config,
+		IRootFolder $rootFolder
 	) {
 		$this->connection = $connection;
 		$this->container = $container;
@@ -140,6 +144,7 @@ class Manager implements IManager {
 		$this->session = $session;
 		$this->dispatcher = $dispatcher;
 		$this->config = $config;
+		$this->rootFolder = $rootFolder;
 	}
 
 	public function getRuleMatcher(): IRuleMatcher {
@@ -148,7 +153,8 @@ class Manager implements IManager {
 			$this->container,
 			$this->l,
 			$this,
-			$this->container->query(Logger::class)
+			$this->container->query(Logger::class),
+			$this->rootFolder
 		);
 	}
 
@@ -175,6 +181,9 @@ class Manager implements IManager {
 			$operations[$operation][$entity] = array_unique(array_merge($operations[$operation][$entity], $eventNames ?? []));
 		}
 		$result->closeCursor();
+		if (count($operations) > 0){
+			$s = "asd";
+		}
 
 		return $operations;
 	}
@@ -721,6 +730,7 @@ class Manager implements IManager {
 				$this->container->query(FileMimeType::class),
 				$this->container->query(FileName::class),
 				$this->container->query(FileSize::class),
+				$this->container->query(Download::class),
 				$this->container->query(FileSystemTags::class),
 				$this->container->query(RequestRemoteAddress::class),
 				$this->container->query(RequestTime::class),

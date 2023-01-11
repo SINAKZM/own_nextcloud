@@ -27,12 +27,15 @@ declare(strict_types=1);
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
 namespace OCA\WorkflowEngine\Service;
 
+use OCA\WorkflowEngine\Check\Download;
 use OCA\WorkflowEngine\Helper\LogContext;
 use OCA\WorkflowEngine\Helper\ScopeContext;
 use OCA\WorkflowEngine\Manager;
 use OCP\AppFramework\QueryException;
+use OCP\Files\IRootFolder;
 use OCP\Files\Storage\IStorage;
 use OCP\IL10N;
 use OCP\IServerContainer;
@@ -68,19 +71,22 @@ class RuleMatcher implements IRuleMatcher {
 	protected $logger;
 	/** @var string */
 	protected $eventName;
+	private IRootFolder $rootFolder;
 
 	public function __construct(
-		IUserSession $session,
+		IUserSession     $session,
 		IServerContainer $container,
-		IL10N $l,
-		Manager $manager,
-		Logger $logger
+		IL10N            $l,
+		Manager          $manager,
+		Logger           $logger,
+		IRootFolder      $rootFolder
 	) {
 		$this->session = $session;
 		$this->manager = $manager;
 		$this->container = $container;
 		$this->l = $l;
 		$this->logger = $logger;
+		$this->rootFolder = $rootFolder;
 	}
 
 	public function setFileInfo(IStorage $storage, string $path, bool $isDir = false): void {
@@ -242,6 +248,18 @@ class RuleMatcher implements IRuleMatcher {
 			// Check is invalid
 			throw new \UnexpectedValueException($this->l->t('Check %s is invalid or does not exist', $check['class']));
 		}
+		if ($this->isDowmload()) {
+			if ($checkInstance instanceof Download) {
+				$filename = explode('/', $this->fileInfo['path'])[1];
+				$userFolder = $this->rootFolder->getUserFolder($this->session->getUser()->getUID())->get($filename)->getSize();
+				$checkInstance->setSize($userFolder);
+				$checkInstance->setRequestMethod($_SERVER['REQUEST_METHOD']);
+			}
+		}
+
 		return $checkInstance->executeCheck($check['operator'], $check['value']);
+	}
+	private function isDowmload(){
+		return $_SERVER['REQUEST_METHOD'] == "GET";
 	}
 }

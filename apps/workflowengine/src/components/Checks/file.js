@@ -67,6 +67,18 @@ const FileChecks = [
 		placeholder: (check) => '5 MB',
 		validate: (check) => check.value ? check.value.match(/^[0-9]+[ ]?[kmgt]?b$/i) !== null : false,
 	},
+	{
+		class: 'OCA\\WorkflowEngine\\Check\\Download',
+		name: "File size (download)",
+		operators: [
+			{ operator: 'less', name: t('workflowengine', 'less') },
+			{ operator: '!greater', name: t('workflowengine', 'less or equals') },
+			{ operator: '!less', name: t('workflowengine', 'greater or equals') },
+			{ operator: 'greater', name: t('workflowengine', 'greater') },
+		],
+		placeholder: (check) => '5 MB',
+		validate: (check) => check.value ? check.value.match(/^[0-9]+[ ]?[kmgt]?b$/i) !== null : false,
+	},
 
 	{
 		class: 'OCA\\WorkflowEngine\\Check\\RequestRemoteAddress',

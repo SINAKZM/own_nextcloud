@@ -1,0 +1,10 @@
+{ "translations": {
+    "Saved" : "সংরক্ষণ করা হলো",
+    "Host" : "হোস্ট",
+    "Port" : "পোর্ট",
+    "Select" : "সিলেক্ট",
+    "Save" : "সংরক্ষণ",
+    "Advanced" : "সুচারু",
+    "Description" : "বিবরণ"
+},"pluralForm" :"nplurals=2; plural=(n != 1);"
+}

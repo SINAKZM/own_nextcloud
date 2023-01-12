@@ -1,0 +1,10 @@
+{ "translations": {
+    "Saved" : "Saxlanıldı",
+    "Host" : "Şəbəkədə ünvan",
+    "Port" : "Port",
+    "Select" : "Select",
+    "Save" : "Saxla",
+    "Advanced" : "İrəliləmiş",
+    "Description" : "Açıqlanma"
+},"pluralForm" :"nplurals=2; plural=(n != 1);"
+}

@@ -1,0 +1,28 @@
+OC.L10N.register(
+    "files_antivirus",
+    {
+    "Clean" : "Pastro",
+    "Infected" : "Infektuar",
+    "Scanner output" : "Prodhim i skanerit",
+    "Saving…" : "Duke u ruajtur...",
+    "Antivirus" : "Antivirus",
+    "File {file} is infected with {virus}" : "Skedari {file} është infektuar me {virus}",
+    "The file has been removed" : "Skedari është fshirë",
+    "Saved" : "Ruajtur",
+    "Host" : "Strehë",
+    "Port" : "Porta",
+    "Select" : "Zgjidhni",
+    "Not required in Daemon Mode." : "Nuk kërkohet në Gjendjen Daemon",
+    "When infected files are found during a background scan" : "Kur skedarë të infektuar gjenden gjatë skanimit ",
+    "Only log" : "Vetëm log",
+    "Delete file" : "Fshi skedarin",
+    "Save" : "Ruaj",
+    "Advanced" : "Të avancuara",
+    "Rules" : "Rregulla",
+    "Clear All" : "Fshi të gjitha",
+    "Reset to defaults" : "Rivendosi te gjendja e paracaktuar",
+    "Description" : "Përshkrim",
+    "Mark as" : "Shëno si",
+    "Add a rule" : "Shto një rregull"
+},
+"nplurals=2; plural=(n != 1);");

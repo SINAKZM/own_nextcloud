@@ -1,0 +1,10 @@
+{ "translations": {
+    "Saving…" : "Salveguardante...",
+    "Saved" : "Salveguardate",
+    "Host" : "Hospite",
+    "Port" : "Porto",
+    "Select" : "Selectionar",
+    "Save" : "Salveguardar",
+    "Description" : "Description"
+},"pluralForm" :"nplurals=2; plural=(n != 1);"
+}

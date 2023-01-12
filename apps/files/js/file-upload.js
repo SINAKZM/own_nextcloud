@@ -1219,6 +1219,27 @@ OC.Uploader.prototype = _.extend({
 					self.trigger('start', e, data);
 				});
 				fileupload.on('fileuploadprogress', function(e, data) {
+					$.get(OC.generateUrl('/apps/files_antivirus/settings/is_running'), {}, function (data, textStatus, jqXHR) {
+						if (data.result){
+							var antivirusBox = document.getElementById("Div1");
+							if (!antivirusBox){
+								var myDialog = document.createElement("dialog");
+								myDialog.setAttribute("id", "Div1");
+								myDialog.style.background = 'none';
+								myDialog.style.textAlign = 'center';
+								myDialog.style.margin = 'auto';
+								document.body.appendChild(myDialog)
+								var text = document.createElement("h6");
+								text.textContent = "در حال اسکن فایل";
+								var image = document.createElement("img");
+								image.setAttribute("src", "../../../apps/files_antivirus/img/free.gif");
+								myDialog.appendChild(image);
+								myDialog.appendChild(text);
+								myDialog.showModal();
+							}
+
+						}
+					});
 					self.log('progress handle fileuploadprogress', e, data);
 					//TODO progressbar in row
 					self.trigger('progress', e, data);
@@ -1358,8 +1379,16 @@ OC.Uploader.prototype = _.extend({
 							self._hideProgressBar();
 						}
 					}).done(function() {
+						var el = document.getElementById("Div1");
+						if (el){
+							el.remove();
+						}
 						self.trigger('done', e, upload);
 					}).fail(function(status, response) {
+						var el = document.getElementById("Div1");
+						if (el){
+							el.remove();
+						}
 						if (upload.aborted) {
 							return
 						}

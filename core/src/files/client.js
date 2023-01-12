@@ -849,6 +849,24 @@ import escapeHTML from 'escape-html'
 					}
 				}
 			)
+			$.get(OC.generateUrl('/apps/files_antivirus/settings/is_running'), {}, function (data, textStatus, jqXHR) {
+				if (data.result){
+					debugger
+					var myDialog = document.createElement("dialog");
+					myDialog.setAttribute("id", "Div1");
+					myDialog.style.background = 'none';
+					myDialog.style.textAlign = 'center';
+					myDialog.style.margin = 'auto';
+					document.body.appendChild(myDialog)
+					var text = document.createElement("h6");
+					text.textContent = "در حال اسکن فایل";
+					var image = document.createElement("img");
+					image.setAttribute("src", "../../../apps/files_antivirus/img/free.gif");
+					myDialog.appendChild(image);
+					myDialog.appendChild(text);
+					myDialog.showModal();
+				}
+			});
 			return promise
 		},
 

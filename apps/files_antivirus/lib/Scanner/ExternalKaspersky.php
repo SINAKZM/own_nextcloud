@@ -28,6 +28,8 @@ use OCA\Files_Antivirus\AppConfig;
 use OCA\Files_Antivirus\Status;
 use OCA\Files_Antivirus\StatusFactory;
 use OCP\Http\Client\IClientService;
+use OCP\IDBConnection;
+use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
 
 class ExternalKaspersky extends ScannerBase {
@@ -38,9 +40,11 @@ class ExternalKaspersky extends ScannerBase {
 		AppConfig $config,
 		LoggerInterface $logger,
 		StatusFactory $statusFactory,
-		IClientService $clientService
+		IClientService $clientService,
+		IDBConnection $IDBConnection,
+		IUserSession $userSession
 	) {
-		parent::__construct($config, $logger, $statusFactory);
+		parent::__construct($config, $logger, $statusFactory, $IDBConnection, $userSession);
 		$this->clientService = $clientService;
 		$this->chunkSize = 10 * 1024 * 1024;
 	}

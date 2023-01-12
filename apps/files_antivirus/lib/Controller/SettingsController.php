@@ -11,11 +11,13 @@ namespace OCA\Files_Antivirus\Controller;
 use OCA\Files_Antivirus\Scanner\ScannerFactory;
 use OCA\Files_Antivirus\Status;
 use \OCP\AppFramework\Controller;
+use OCP\IDBConnection;
 use \OCP\IRequest;
 use \OCP\IL10N;
 use \OCA\Files_Antivirus\AppConfig;
 
 use \OCP\AppFramework\Http\JSONResponse;
+use OCP\IUserSession;
 
 class SettingsController extends Controller {
 
@@ -30,13 +32,23 @@ class SettingsController extends Controller {
 	private $l10n;
 
 	private $scannerFactory;
+	/**
+	 * @var IDBConnection
+	 */
+	private IDBConnection $IDBConnection;
+	/**
+	 * @var IUserSession
+	 */
+	private IUserSession $userSession;
 
-	public function __construct($appName, IRequest $request, AppConfig $appconfig, IL10N $l10n, ScannerFactory $scannerFactory) {
+	public function __construct($appName, IRequest $request, AppConfig $appconfig, IL10N $l10n, ScannerFactory $scannerFactory, IDBConnection $IDBConnection, IUserSession $userSession) {
 		parent::__construct($appName, $request);
 
 		$this->settings = $appconfig;
 		$this->l10n = $l10n;
 		$this->scannerFactory = $scannerFactory;
+		$this->IDBConnection = $IDBConnection;
+		$this->userSession = $userSession;
 	}
 
 	/**
@@ -80,6 +92,30 @@ class SettingsController extends Controller {
 				'status' => $success ? 'success' : 'error',
 				'settings' => $this->settings->getAllValues(),
 			]
+		);
+	}
+	/**
+	 * @return JSONResponse
+	 * @throws \OCP\DB\Exception
+	 * @NoAdminRequired
+	 */
+	public function isAntivirusRunning() {
+
+		$qb = $this->IDBConnection->getQueryBuilder();
+		$userAccess = $qb->select('*')
+			->from('activity', 'ac')
+			->where('ac.app = :app')
+			->andWhere("ac.affecteduser = :affecteduser")
+			->setParameters([
+					'app' => "files_antivirus",
+					'affecteduser' => $this->userSession->getUser()->getUID(),
+				]
+			)
+			->execute()
+			->fetchAll();
+		$lastProcess = end($userAccess);
+		return new JSONResponse(
+			['result' =>(bool)$lastProcess['type'] == 'file_scanning']
 		);
 	}
 }

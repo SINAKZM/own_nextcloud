@@ -24,9 +24,12 @@
 namespace OCA\Files_Antivirus\Scanner;
 
 use OCA\Files_Antivirus\AppConfig;
+use OCA\Files_Antivirus\AppInfo\Application;
 use OCA\Files_Antivirus\Item;
 use OCA\Files_Antivirus\Status;
 use OCA\Files_Antivirus\StatusFactory;
+use OCP\IDBConnection;
+use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
 
 abstract class ScannerBase implements IScanner {
@@ -53,12 +56,22 @@ abstract class ScannerBase implements IScanner {
 	protected ?string $lastChunk = null;
 	protected bool $isLogUsed = false;
 	protected bool $isAborted = false;
+	/**
+	 * @var IDBConnection
+	 */
+	private IDBConnection $IDBConnection;
+	/**
+	 * @var IUserSession
+	 */
+	private IUserSession $userSession;
 
-	public function __construct(AppConfig $config, LoggerInterface $logger, StatusFactory $statusFactory) {
+	public function __construct(AppConfig $config, LoggerInterface $logger, StatusFactory $statusFactory, IDBConnection $IDBConnection, IUserSession $userSession) {
 		$this->appConfig = $config;
 		$this->logger = $logger;
 		$this->statusFactory = $statusFactory;
 		$this->status = $this->statusFactory->newStatus();
+		$this->IDBConnection = $IDBConnection;
+		$this->userSession = $userSession;
 	}
 
 	/**
@@ -128,6 +141,25 @@ abstract class ScannerBase implements IScanner {
 	 */
 	public function completeAsyncScan(): Status {
 		$this->shutdownScanner();
+		$user = $this->userSession->getUser();
+		$qb = $this->IDBConnection->getQueryBuilder();
+		$qb
+			->insert('activity')
+			->values(
+				[
+					'app' => '?',
+					'affecteduser' => '?',
+					'subject' => '?',
+					'subjectparams' => '?',
+					'type' => '?',
+				]
+			)
+			->setParameter(0, Application::APP_NAME)
+			->setParameter(1, $user->getUID())
+			->setParameter(2, Application::APP_NAME)
+			->setParameter(3, Application::APP_NAME)
+			->setParameter(4, 'file_scanned');
+		$qb->execute();
 		return $this->getStatus();
 	}
 
@@ -137,6 +169,25 @@ abstract class ScannerBase implements IScanner {
 	 * @return void
 	 */
 	public function initScanner() {
+		$user = $this->userSession->getUser();
+		$qb = $this->IDBConnection->getQueryBuilder();
+		$qb
+			->insert('activity')
+			->values(
+				[
+					'app' => '?',
+					'affecteduser' => '?',
+					'subject' => '?',
+					'subjectparams' => '?',
+					'type' => '?',
+				]
+			)
+			->setParameter(0, Application::APP_NAME)
+			->setParameter(1, $user->getUID())
+			->setParameter(2, Application::APP_NAME)
+			->setParameter(3, Application::APP_NAME)
+			->setParameter(4, 'file_scanning');
+		$qb->execute();
 		$this->byteCount = 0;
 		if ($this->status->getNumericStatus() === Status::SCANRESULT_INFECTED) {
 			$this->infectedStatus = clone $this->status;

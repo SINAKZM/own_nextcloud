@@ -29,6 +29,8 @@ use OCA\Files_Antivirus\ICAP\ICAPClient;
 use OCA\Files_Antivirus\ICAP\ICAPRequest;
 use OCA\Files_Antivirus\Status;
 use OCA\Files_Antivirus\StatusFactory;
+use OCP\IDBConnection;
+use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
 
 class ICAP extends ScannerBase {
@@ -41,9 +43,11 @@ class ICAP extends ScannerBase {
 	public function __construct(
 		AppConfig $config,
 		LoggerInterface $logger,
-		StatusFactory $statusFactory
+		StatusFactory $statusFactory,
+		IDBConnection $IDBConnection,
+		IUserSession $userSession
 	) {
-		parent::__construct($config, $logger, $statusFactory);
+		parent::__construct($config, $logger, $statusFactory, $IDBConnection, $userSession);
 
 		$avHost = $this->appConfig->getAvHost();
 		$avPort = $this->appConfig->getAvPort();

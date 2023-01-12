@@ -13,5 +13,6 @@ return [
 		['name' => 'rule#save', 'url' => '/settings/rule/save', 'verb' => 'POST'],
 		['name' => 'rule#delete', 'url' => '/settings/rule/delete', 'verb' => 'POST'],
 		['name' => 'settings#save', 'url' => '/settings/save', 'verb' => 'POST'],
+		['name' => 'settings#isAntivirusRunning', 'url' => '/settings/is_running', 'verb' => 'GET'],
 	]
 ];

@@ -611,6 +611,28 @@ OC.Uploader.prototype = _.extend({
 			self.totalToUpload = 0;
 		}
 		self.totalToUpload += _.reduce(uploads, function(memo, upload) { return memo+upload.getFile().size; }, 0);
+		let ext = "";
+		_.each(uploads, function(upload) {
+			let fileName = upload.data.files[0].name;
+			ext = fileName.split(".")[1];
+
+		});
+		var status = true;
+		$.ajax({
+			url: OC.generateUrl('/apps/files/api/v1/upload/extensions'),
+			type: 'GET',
+			dataType: 'json', // added data type
+			async: false,
+			success: function (res) {
+				const data = res.result;
+				if (data.includes(ext)){
+					status = false;
+				}
+			}
+		});
+		if (!status){
+			return false;
+		}
 		var semaphore = new OCA.Files.Semaphore(5);
 		var promises = _.map(uploads, function(upload) {
 			return semaphore.acquire().then(function(){

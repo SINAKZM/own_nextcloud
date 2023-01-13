@@ -117,6 +117,11 @@ $application->registerRoutes(
 				'url' => '/directEditing/{token}',
 				'verb' => 'GET'
 			],
+			[
+				'name' => 'API#getNotAllowedExtensionForUpload',
+				'url' => '/api/v1/upload/extensions',
+				'verb' => 'GET',
+			],
 		],
 		'ocs' => [
 			[

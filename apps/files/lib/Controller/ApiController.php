@@ -373,4 +373,17 @@ class ApiController extends Controller {
 		$node = $this->userFolder->get($folderpath);
 		return $node->getType();
 	}
+	/**
+	 * @NoAdminRequired
+	 * @return JSONResponse
+	 */
+	public function getNotAllowedExtensionForUpload() {
+		$config = \OC::$server->get(IConfig::class);
+		$extensions =$config->getSystemValue("not_allowed_extensions_for_upload", false);
+		return new JSONResponse(
+			[
+				'result' => $extensions,
+			]
+		);
+	}
 }

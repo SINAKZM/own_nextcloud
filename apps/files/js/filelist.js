@@ -529,6 +529,11 @@
 		_getCurrentSelectionMode: function () {
 			return this._selectionMode;
 		},
+		formatDate: function (timestamp, local){
+			var options = {hourCycle:'h24',timeZone:'Asia/Tehran',weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'numeric',minute:'numeric',second:'numeric'};
+			let mydate = new Date(timestamp);
+			return mydate.toLocaleDateString(local,options);
+		},
 		_onClickToggleSelectionMode: function () {
 			this._selectionMode = (this._selectionMode === 'range') ? 'single' : 'range';
 			if (this._selectionMode === 'single') {
@@ -1861,9 +1866,10 @@
 				text = '?';
 			}
 			td = $('<td></td>').attr({ "class": "date" });
+			let local = OC.getLocale().replace("_", "-");
 			td.append($('<span></span>').attr({
 				"class": "modified live-relative-timestamp",
-				"title": formatted,
+				"title": this.formatDate(mtime,local),
 				"data-timestamp": mtime,
 				"style": 'color:rgb('+modifiedColor+','+modifiedColor+','+modifiedColor+')'
 			}).text(text)

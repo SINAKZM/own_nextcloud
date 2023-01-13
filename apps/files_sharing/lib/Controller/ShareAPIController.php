@@ -52,6 +52,7 @@ use OCA\Files_Sharing\SharedStorage;
 use OCA\Files\Helper;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Http\DataResponse;
+use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\OCS\OCSBadRequestException;
 use OCP\AppFramework\OCS\OCSException;
 use OCP\AppFramework\OCS\OCSForbiddenException;
@@ -59,12 +60,14 @@ use OCP\AppFramework\OCS\OCSNotFoundException;
 use OCP\AppFramework\OCSController;
 use OCP\AppFramework\QueryException;
 use OCP\Constants;
+use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\Files\InvalidPathException;
 use OCP\Files\IRootFolder;
 use OCP\Files\Folder;
 use OCP\Files\Node;
 use OCP\Files\NotFoundException;
 use OCP\IConfig;
+use OCP\IDBConnection;
 use OCP\IGroupManager;
 use OCP\IL10N;
 use OCP\IPreview;
@@ -114,6 +117,7 @@ class ShareAPIController extends OCSController {
 	private $userStatusManager;
 	/** @var IPreview */
 	private $previewManager;
+	private IDBConnection $IDBConnection;
 
 	/**
 	 * Share20OCS constructor.
@@ -146,7 +150,8 @@ class ShareAPIController extends OCSController {
 		IAppManager $appManager,
 		IServerContainer $serverContainer,
 		IUserStatusManager $userStatusManager,
-		IPreview $previewManager
+		IPreview $previewManager,
+		IDBConnection      $IDBConnection,
 	) {
 		parent::__construct($appName, $request);
 
@@ -163,6 +168,7 @@ class ShareAPIController extends OCSController {
 		$this->serverContainer = $serverContainer;
 		$this->userStatusManager = $userStatusManager;
 		$this->previewManager = $previewManager;
+		$this->IDBConnection = $IDBConnection;
 	}
 
 	/**
@@ -176,6 +182,12 @@ class ShareAPIController extends OCSController {
 	 * @suppress PhanUndeclaredClassMethod
 	 */
 	protected function formatShare(IShare $share, Node $recipientNode = null): array {
+		$qb = $this->IDBConnection->getQueryBuilder();
+		$result = $qb->select('*')
+			->from('share')
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($share->getId())))
+			->execute();
+		$row = $result->fetch();
 		$sharedBy = $this->userManager->get($share->getSharedBy());
 		$shareOwner = $this->userManager->get($share->getShareOwner());
 
@@ -197,6 +209,8 @@ class ShareAPIController extends OCSController {
 			'note' => $share->getNote(),
 			'label' => $share->getLabel(),
 			'displayname_file_owner' => $shareOwner !== null ? $shareOwner->getDisplayName() : $share->getShareOwner(),
+			'is_accessible' => !is_null($row['is_accessible']) ? (bool)$row['is_accessible'] : null,
+			'current_user' => $this->currentUser
 		];
 
 		$userFolder = $this->rootFolder->getUserFolder($this->currentUser);
@@ -1332,7 +1346,148 @@ class ShareAPIController extends OCSController {
 
 		return new DataResponse();
 	}
+	/**
+	 * @NoAdminRequired
+	 */
+	public function updateIsAccessible(int $id, bool $isAccessible) {
+		$qb = $this->IDBConnection->getQueryBuilder();
+		$result = $qb->select('*')
+			->from('share')
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($id)))
+			->execute();
+		$row = $result->fetch();
+		if ($row) {
+			$qb->update('share')
+				->set('is_accessible', $qb->createNamedParameter($isAccessible, IQueryBuilder::PARAM_BOOL))
+				->where($qb->expr()->eq('id', $qb->createNamedParameter($id)));
+			$qb->execute();
+			return new JSONResponse(
+				[
+					'result' => "folder| file accessible permission successfully changed",
+				]
+			);
+		}
+		return new JSONResponse(
+			[
+				'data' => [],
+				'error' => "not found",
+			]
+		);
+	}
 
+	/**
+	 * @NoAdminRequired
+	 */
+	public function getIsAccessible(int $id) {
+		$qb = $this->IDBConnection->getQueryBuilder();
+		$result = $qb->select('*')
+			->from('share')
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($id)))
+			->execute();
+		$row = $result->fetch();
+		return new JSONResponse(
+			[
+				'result' => $row,
+			]
+		);
+	}
+	/**
+	 * @param $folder
+	 * @return JSONResponse
+	 * @throws \OCP\DB\Exception
+	 * @NoAdminRequired
+	 */
+	public function getIsInAccessibleByPath($folder) {
+		$individual = $this->getCurrentSharedWithRowIndividually($folder);
+		if ($individual) {
+			$initiatorUser = $this->getInitiatorUser($individual);
+			if ($initiatorUser) {
+				if (!$this->isUserShareByOwner($individual)) {
+					$owner = $this->findUserShareOwner($folder, $individual['uid_initiator'], $individual['uid_owner']);
+					if ($owner['is_accessible'] === 0) {
+						return new JSONResponse(
+							[
+								'result' => false,
+							]
+						);
+					} else {
+						return new JSONResponse(
+							[
+								'result' => is_null($individual['is_accessible']) ? true : $individual['is_accessible'],
+							]
+						);
+					}
+				}
+				return new JSONResponse(
+					[
+						'result' => is_null($individual['is_accessible']) ? true : $individual['is_accessible'],
+					]
+				);
+			} else {
+				return new JSONResponse(
+					[
+						'result' => $initiatorUser,
+					]
+				);
+			}
+
+		} else {
+			$groups = $this->getGroupsOfCurrentUser();
+			$sharedByUserGroups = $this->getSharedByUserGroups($folder, $groups);
+			if ($sharedByUserGroups) {
+				$isAccessible = "";
+				if ($this->isMultipleGroupShareExist($sharedByUserGroups)) {
+					//for multiple groups for a user
+					$gatheredUserGroupsSharesIsAccessibles = $this->gatherUserGroupSharesIsAccessibles($sharedByUserGroups);
+					$isAccessible = array_sum($gatheredUserGroupsSharesIsAccessibles);
+				} else {
+					$initiatorUser = $this->getInitiatorUser($sharedByUserGroups[0]);
+					if ($initiatorUser) {
+						$owner = $this->findUserShareOwner($folder, $sharedByUserGroups[0]['uid_initiator'], $sharedByUserGroups[0]['uid_owner']);
+						if ($owner['is_accessible'] === 0) {
+							return new JSONResponse(
+								[
+									'result' => false,
+								]
+							);
+						} else {
+							return new JSONResponse(
+								[
+									'result' => is_null($sharedByUserGroups[0]['is_accessible']) ? true : $sharedByUserGroups[0]['is_accessible'],
+								]
+							);
+						}
+					} else {
+						$isAccessible = false;
+					}
+				}
+				return new JSONResponse(
+					[
+						'result' => is_null($isAccessible) ? true : $isAccessible
+					]
+				);
+
+			}
+		}
+
+
+		return new JSONResponse(
+			[
+				'result' => true
+			]
+		);
+	}
+	public function getCurrentSharedWithRowIndividually($folder) {
+		$qb = $this->IDBConnection->getQueryBuilder();
+		return $qb->select('*')
+			->from('share')
+			->where($qb->expr()->eq('item_type', $qb->createNamedParameter("folder")))
+			->andWhere($qb->expr()->eq('file_target', $qb->createNamedParameter($folder)))
+			->andWhere($qb->expr()->eq('share_with', $qb->createNamedParameter($this->currentUser)))
+			->andWhere($qb->expr()->eq('share_type', $qb->createNamedParameter(IShare::TYPE_USER)))
+			->execute()
+			->fetch();
+	}
 	/**
 	 * Does the user have read permission on the share
 	 *
@@ -1915,5 +2070,124 @@ class ShareAPIController extends OCSController {
 			}
 		}
 
+	}
+	private function userShareExists($userShare) {
+		return (bool)$userShare;
+	}
+	private function isUserShareByOwner($userShare) {
+		return $userShare['uid_initiator'] == $userShare['uid_owner'];
+	}
+	private function findUserShareOwner($folder, $uidInitiator, $uidOwner) {
+		$qb = $this->IDBConnection->getQueryBuilder();
+		$userAccess = $qb->select('*')
+			->from('share', 'sh')
+			->where('sh.item_type = :item_type')
+			->andWhere("sh.file_target = :file_target")
+			->andWhere('sh.share_type = :share_type')
+			->andWhere('sh.share_with = :share_with')
+			->andWhere('sh.uid_initiator = :uid_initiator')
+			->andWhere('sh.uid_owner = :uid_owner')
+			->setParameters([
+					'item_type' => "folder",
+					'file_target' => $folder,
+					'share_type' => IShare::TYPE_USER,
+					'uid_initiator' => $uidOwner,
+					'uid_owner' => $uidOwner,
+					'share_with' => $uidInitiator,
+				]
+			)
+			->execute()
+			->fetch();
+		if ($userAccess) {
+			return $userAccess;
+		}
+		return $qb->select('*')
+			->from('share', 'sh')
+			->where('sh.item_type = :item_type')
+			->andWhere("sh.file_target = :file_target")
+			->andWhere('sh.share_type = :share_type')
+			->andWhere('sh.uid_initiator = :uid_initiator')
+			->andWhere('sh.uid_owner = :uid_owner')
+			->andWhere('sh.share_with != :share_with')
+			->setParameters([
+					'item_type' => "folder",
+					'file_target' => $folder,
+					'share_type' => IShare::TYPE_GROUP,
+					'uid_initiator' => $uidOwner,
+					'uid_owner' => $uidOwner,
+					'share_with' => $uidInitiator,
+				]
+			)
+			->execute()
+			->fetch();
+	}
+	private function getGroupsOfCurrentUser() {
+		$qb = $this->IDBConnection->getQueryBuilder();
+		return $qb->select('gid')
+			->from('group_user')
+			->where($qb->expr()->eq('uid', $qb->createNamedParameter($this->currentUser)))
+			->execute()
+			->fetchAll();
+	}
+
+	private function getSharedByUserGroups($folder, $groups) {
+		$result = [];
+		$qb = $this->IDBConnection->getQueryBuilder();
+		$r = $qb->select('*')
+			->from('share', 'sh')
+			->where('sh.item_type = :item_type')
+			->andWhere("sh.file_target = :file_target")
+			->andWhere('sh.share_with IN (:groups)')
+			->andWhere('sh.share_type = :share_type')
+			->setParameters([
+					'item_type' => "folder",
+					'file_target' => $folder,
+					'share_type' => IShare::TYPE_GROUP,
+					'groups' => array_column($groups, 'gid'),
+				]
+				, ['groups' => \Doctrine\DBAL\Connection::PARAM_STR_ARRAY]
+			)
+			->execute()
+			->fetchAll();
+//		foreach ($r as $key => $value) {
+//			if ($value['uid_initiator'] == $value['uid_owner']) {
+//				$result[] = $value;
+//			}
+//		}
+		return $r;
+	}
+	private function isMultipleGroupShareExist($sharedByUserGroups) {
+		return count($sharedByUserGroups) > 1;
+	}
+
+	private function gatherUserGroupSharesIsAccessibles($sharedByUserGroups) {
+		$isAccessibles = [];
+		foreach ($sharedByUserGroups as $sharedByUserGroup) {
+			$initiator = $this->getInitiatorUser($sharedByUserGroup);
+			if ($initiator) {
+				$isAccessible = is_null($sharedByUserGroup['is_accessible']) ? true : $sharedByUserGroup['is_accessible'];
+				array_push($isAccessibles, $isAccessible);
+			}
+		}
+		return $isAccessibles;
+	}
+
+	private function getInitiatorUser($sharedUser) {
+		if ($sharedUser['uid_initiator'] != $sharedUser['uid_owner']) {
+			$qb = $this->IDBConnection->getQueryBuilder();
+			$individual = $qb->select('*')
+				->from('share')
+				->where($qb->expr()->eq('item_type', $qb->createNamedParameter("folder")))
+				->andWhere($qb->expr()->eq('file_target', $qb->createNamedParameter($sharedUser['file_target'])))
+				->andWhere($qb->expr()->eq('share_with', $qb->createNamedParameter($sharedUser['uid_initiator'])))
+				->andWhere($qb->expr()->eq('share_type', $qb->createNamedParameter(IShare::TYPE_USER)))
+				->execute()
+				->fetch();
+			return is_null($individual['is_accessible']) ? true : $individual['is_accessible'];
+		}
+		if ($sharedUser['uid_initiator'] == $sharedUser['uid_owner']) {
+			return is_null($sharedUser['is_accessible']) ? true : $sharedUser['is_accessible'];
+		}
+		return false;
 	}
 }

@@ -1471,7 +1471,29 @@
 					}
 				}, 0);
 			}
-
+			$("#filestable").addClass("hidden");
+			$.ajax({
+				url: OC.generateUrl('/ocs/v2.php/apps/files_sharing/api/v1/shares/is_in_accessible_by_path'),
+				type: 'POST',
+				data: {
+					"folder": fileData.path
+				},
+				dataType: 'json', // added data type
+				async: false,
+				success: function (res) {
+					const data = res.result;
+					if (!data) {
+						newTrs.forEach(tr => {
+							// tr.remove();
+							tr.addClass("hidden");
+							tr.empty();
+						})
+						setTimeout(function(){ $("#emptycontent").removeClass("hidden") }, 1);
+					}else {
+						$("#filestable").removeClass("hidden");
+					}
+				}
+			});
 			return newTrs;
 		},
 
@@ -1953,7 +1975,24 @@
 				this.fileSummary.add(fileData, true);
 				this.updateEmptyContent();
 			}
-
+			$.ajax({
+				url: OC.generateUrl('/ocs/v2.php/apps/files_sharing/api/v1/shares/is_in_accessible_by_path'),
+				type: 'POST',
+				data: {
+					"folder": fileData.path
+				},
+				dataType: 'json', // added data type
+				async: false,
+				success: function (res) {
+					const data = res.result;
+					if (!data) {
+						// $tr.remove();
+						$tr.addClass('hidden');
+						$tr.empty();
+						setTimeout(function(){ $("#emptycontent").removeClass("hidden") }, 1);
+					}
+				}
+			});
 			return $tr;
 		},
 

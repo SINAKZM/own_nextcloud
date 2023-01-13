@@ -120,5 +120,21 @@ export default {
 				throw new Error(message)
 			}
 		},
+		updateAccess (id, isAccessible) {
+			try {
+				axios.post(shareUrl + `/accessible/${id}`, {isAccessible})
+				return true
+			} catch (error) {
+				return true
+			}
+		},
+		async getAccess (id) {
+			try {
+				const access = await axios.get(shareUrl + `/accessible/${id}`)
+				return access.data.result.is_accessible
+			} catch (error) {
+				return true
+			}
+		}
 	},
 }

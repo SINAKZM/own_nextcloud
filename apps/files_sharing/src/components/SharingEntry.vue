@@ -134,7 +134,9 @@
 						@submit="onNoteSubmit" />
 				</template>
 			</template>
-
+			<ActionCheckbox :checked.sync="hasHasAccessible" v-if="share._share.uid_file_owner === share._share.current_user && share._share.item_type === 'folder' && share._share.uid_owner === share._share.current_user">
+				is accessible
+			</ActionCheckbox>
 			<ActionButton v-if="share.canDelete"
 				icon="icon-close"
 				:disabled="saving"
@@ -181,6 +183,7 @@ export default {
 			permissionsDelete: OC.PERMISSION_DELETE,
 			permissionsRead: OC.PERMISSION_READ,
 			permissionsShare: OC.PERMISSION_SHARE,
+			isAccessible: '',
 		}
 	},
 
@@ -386,7 +389,24 @@ export default {
 					: ''
 			},
 		},
+		hasHasAccessible: {
+			get () {
+				if (this.share._share.is_accessible === true){
+					return true;
+				}
+				if (this.share._share.is_accessible === false){
+					return false;
+				}
+				if (this.share._share.is_accessible === null){
+					return true;
+				}
 
+			},
+			set (enabled) {
+				this.updateIsAccessible(enabled);
+				this.share._share.is_accessible = enabled;
+			},
+		},
 		dateMaxEnforced() {
 			if (!this.isRemote) {
 				return this.config.isDefaultInternalExpireDateEnforced
@@ -465,6 +485,12 @@ export default {
 		onMenuClose() {
 			this.onNoteSubmit()
 		},
+		updateIsAccessible (isAccessible) {
+			this.accessibleUpdate(isAccessible)
+		},
+		async getIsAccessible () {
+			return await this.accessibleGet();
+		}
 	},
 }
 </script>

@@ -202,5 +202,20 @@ return [
 			'url' => '/api/v1/remote_shares/{id}',
 			'verb' => 'DELETE',
 		],
+		[
+			'name' => 'ShareAPI#getIsInAccessibleByPath',
+			'url' => '/api/v1/shares/is_in_accessible_by_path',
+			'verb' => 'POST',
+		],
+		[
+			'name' => 'ShareAPI#updateIsAccessible',
+			'url' => '/api/v1/shares/accessible/{id}',
+			'verb' => 'POST',
+		],
+		[
+			'name' => 'ShareAPI#getIsAccessible',
+			'url' => '/api/v1/shares/accessible/{id}',
+			'verb' => 'GET',
+		],
 	],
 ];

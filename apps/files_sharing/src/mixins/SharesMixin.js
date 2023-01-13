@@ -213,7 +213,12 @@ export default {
 				this.loading = false
 			}
 		},
-
+		async accessibleUpdate(propertyNames) {
+			await this.updateAccess(this.share.id, propertyNames)
+		},
+		async accessibleGet() {
+			return await this.getAccess(this.share.id)
+		},
 		/**
 		 * Send an update of the share to the queue
 		 *

@@ -151,7 +151,7 @@ class ShareAPIController extends OCSController {
 		IServerContainer $serverContainer,
 		IUserStatusManager $userStatusManager,
 		IPreview $previewManager,
-		IDBConnection      $IDBConnection,
+		IDBConnection      $IDBConnection
 	) {
 		parent::__construct($appName, $request);
 

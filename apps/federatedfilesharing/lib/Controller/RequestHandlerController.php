@@ -473,6 +473,9 @@ class RequestHandlerController extends OCSController {
 			throw new OCSBadRequestException('Share not found or token invalid');
 		}
 	}
+	/**
+	 * @NoAdminRequired
+	 */
 	public function getConfig() {
 		$value = $this->IConfig->getSystemValue('sharing.force_external_share_accept', false);
 		return new Http\JSONResponse(['result' => $value]);

@@ -52,6 +52,7 @@ use OCA\Files_Sharing\Exceptions\SharingRightsException;
 use OCA\Files_Sharing\External\Storage;
 use OCA\Files\Helper;
 use OCA\Files_Sharing\ExternalShare;
+use OCA\Files_Sharing\Settings\Personal;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\Http\JSONResponse;
@@ -1854,6 +1855,18 @@ class ShareAPIController extends OCSController {
 			->setParameter(5, $note)
 			->setParameter(6, $this->currentUser)
 			->executeStatement();
+	}
+	/**
+	 * @return JSONResponse
+	 * @NoAdminRequired
+	 */
+	public function getFederationSharesList() {
+		$personalSettings = \OC::$server->get(Personal::class);
+		return new JSONResponse(
+			[
+				'result' => $personalSettings->getFederationShares(),
+			]
+		);
 	}
 	/**
 	 * @param $id

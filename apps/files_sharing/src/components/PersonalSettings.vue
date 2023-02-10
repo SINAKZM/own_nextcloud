@@ -104,17 +104,33 @@ export default {
 			}
 		},
 		approveFederationShare(id){
+			let self = this;
 			axios.post(generateUrl('/ocs/v2.php/apps/files_sharing/api/v1/shares/approve_external_share'),{
 				"id": id
 			}).then(res=>{
-				alert("approved")
+				alert("shared successfully")
+				self.indexFederationShares();
+			}).catch(err=> {
+				alert("something went wrong")
 			});
 		},
 		rejectFederationShare(id){
+			let self = this;
 			axios.post(generateUrl('/ocs/v2.php/apps/files_sharing/api/v1/shares/reject_external_share'),{
 				"id": id
 			}).then(res=>{
-				alert("approved")
+				alert("rejected successfully")
+				self.indexFederationShares();
+			}).catch(err=> {
+				alert("something went wrong")
+			});
+		},
+		indexFederationShares(){
+			let self = this;
+			axios.get(generateUrl('/ocs/v2.php/apps/files_sharing/api/v1/shares/federation_shares_list/index')).then(res=>{
+				self.federationShares = res.data.result;
+			}).catch(err=> {
+				alert("something is wrong")
 			});
 		},
 	},

@@ -85,7 +85,7 @@ class Personal implements ISettings {
 
 	}
 
-	private function getFederationShares() {
+	public function getFederationShares() {
 		$connection = \OC::$server->get(\OCP\IDBConnection::class);
 		$groupAdmin = $this->groupAdmin();
 		$federationShares = [];

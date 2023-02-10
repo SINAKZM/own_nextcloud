@@ -203,6 +203,11 @@ return [
 			'verb' => 'DELETE',
 		],
 		[
+			'name' => 'ShareAPI#getFederationSharesList',
+			'url' => '/api/v1/shares/federation_shares_list/index',
+			'verb' => 'GET',
+		],
+		[
 			'name' => 'ShareAPI#approveExternalShare',
 			'url' => '/api/v1/shares/approve_external_share',
 			'verb' => 'POST',

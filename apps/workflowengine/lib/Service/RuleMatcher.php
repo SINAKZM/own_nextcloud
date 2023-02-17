@@ -30,6 +30,7 @@ declare(strict_types=1);
 
 namespace OCA\WorkflowEngine\Service;
 
+use OC\Files\Cache\Cache;
 use OCA\WorkflowEngine\Check\Download;
 use OCA\WorkflowEngine\Helper\LogContext;
 use OCA\WorkflowEngine\Helper\ScopeContext;
@@ -250,10 +251,19 @@ class RuleMatcher implements IRuleMatcher {
 		}
 		if ($this->isDowmload()) {
 			if ($checkInstance instanceof Download) {
-				$filename = explode('/', $this->fileInfo['path'])[1];
-				$userFolder = $this->rootFolder->getUserFolder($this->session->getUser()->getUID())->get($filename)->getSize();
-				$checkInstance->setSize($userFolder);
-				$checkInstance->setRequestMethod($_SERVER['REQUEST_METHOD']);
+				if (!$this->fileInfo['isDir']){
+					if ($this->fileInfo['path']){
+						$explodedArray = explode('/', $this->fileInfo['path']);
+						if ($explodedArray[0] == "files"){
+							$filename = join('/', array_slice($explodedArray,1));
+							$mountPoint = trim($this->fileInfo['storage']->mountPoint, '/');
+							$userFolder = $this->rootFolder->getUserFolder($mountPoint)->get($filename);
+							$size = $userFolder->getSize();
+							$checkInstance->setSize($size);
+							$checkInstance->setRequestMethod($_SERVER['REQUEST_METHOD']);
+						}
+					}
+				}
 			}
 		}
 

@@ -636,11 +636,11 @@ class ShareAPIController extends OCSController {
 					if ($submitShare){
 						return new DataResponse(["result"=>"successfully shared"]);
 					}
-					throw new \LogicException('share already exists');
+					throw new OCSBadRequestException("share already exists");
 				}
-				throw new \LogicException('sender not allowed');
+				throw new OCSBadRequestException("sender not allowed");
 			}
-			throw new \LogicException('receiver not allowed');
+			throw new OCSBadRequestException("receiver not allowed");
 		} elseif ($shareType === IShare::TYPE_CIRCLE) {
 			if (!\OC::$server->getAppManager()->isEnabledForUser('circles') || !class_exists('\OCA\Circles\ShareByCircleProvider')) {
 				throw new OCSNotFoundException($this->l->t('You cannot share to a Circle if the app is not enabled'));

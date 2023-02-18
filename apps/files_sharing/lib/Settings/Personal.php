@@ -111,4 +111,19 @@ class Personal implements ISettings {
 		}
 		return $federationShares;
 	}
+	public function getFilteredFederationShares($path, $from) {
+		$connection = \OC::$server->get(\OCP\IDBConnection::class);
+		$qb = $connection->getQueryBuilder();
+		return $qb->select("*")
+			->from("share_external_list")
+
+			->where(
+				$qb->expr()->andX(
+					$qb->expr()->eq('from', $qb->createNamedParameter($from)),
+					$qb->expr()->eq('path', $qb->createNamedParameter($path)),
+				)
+			)
+			->executeQuery()
+			->fetchAll();
+	}
 }

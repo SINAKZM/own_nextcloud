@@ -73,6 +73,21 @@
 				:id="`${fileInfo.id}`"
 				type="file"
 				:name="fileInfo.name" />
+			<div v-if="pendingFederationShares.length > 0">
+				<hr/>
+				<h1><b>pending Federated Cloud Shared</b></h1>
+				<table class="styled-table" >
+					<tr>
+						<td>with</td>
+						<td>type</td>
+					</tr>
+					<tr v-for="federationShare in pendingFederationShares">
+						<td>{{federationShare.share_with}}</td>
+						<td v-if="federationShare.share_type == '6'">user</td>
+						<td v-else>group</td>
+					</tr>
+				</table>
+			</div>
 		</template>
 
 		<!-- additionnal entries, use it with cautious -->
@@ -87,7 +102,7 @@
 
 <script>
 import { CollectionList } from 'nextcloud-vue-collections'
-import { generateOcsUrl } from '@nextcloud/router'
+import {generateOcsUrl, generateUrl} from '@nextcloud/router'
 import Avatar from '@nextcloud/vue/dist/Components/Avatar'
 import axios from '@nextcloud/axios'
 
@@ -136,6 +151,7 @@ export default {
 			linkShares: [],
 
 			sections: OCA.Sharing.ShareTabSections.getSections(),
+			pendingFederationShares: []
 		}
 	},
 
@@ -165,6 +181,10 @@ export default {
 			this.fileInfo = fileInfo
 			this.resetState()
 			this.getShares()
+			console.log(this.fileInfo)
+			debugger
+			const path = (this.fileInfo.path + '/' + this.fileInfo.name).replace('//', '/')
+			this.getExternalPendingShares(path);
 		},
 
 		/**
@@ -354,7 +374,17 @@ export default {
 				}
 			})
 		},
-	},
+		getExternalPendingShares(path){
+			let self = this;
+			axios.post(generateUrl('/ocs/v2.php/apps/files_sharing/api/v1/shares/federation_shares_list/index'),{
+				"path":path,
+			}).then(res=>{
+				self.pendingFederationShares = res.data.result;
+			}).catch(err=> {
+				alert("something is wrong")
+			});
+		}
+	}
 }
 </script>
 

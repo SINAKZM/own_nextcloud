@@ -512,7 +512,6 @@ class ShareAPIController extends OCSController {
 			$fileInfo = $node->getFileInfo();
 			$fileInfo['permissions'] |= $nodeById->getPermissions();
 		}
-
 		$share->setNode($node);
 
 		try {
@@ -633,12 +632,15 @@ class ShareAPIController extends OCSController {
 			$federationServer = $remoteData[1];
 			if ($this->isReceiverAllowed($shareType, $receiver, $federationServer)){
 				if ($this->isSenderAllowed()){
-					$this->submitShareInList($path, $permissions, $shareType, $shareWith, $expireDate, $note);
-					return new DataResponse(["result"=>"successfully shared"]);
+					$submitShare = $this->submitShareInList($path, $permissions, $shareType, $shareWith, $expireDate, $note);
+					if ($submitShare){
+						return new DataResponse(["result"=>"successfully shared"]);
+					}
+					throw new \LogicException('share already exists');
 				}
-				return new DataResponse(["result"=>"sender not allowed"], 401);
+				throw new \LogicException('sender not allowed');
 			}
-			return new DataResponse(["result"=>"receiver not allowed"], 401);
+			throw new \LogicException('receiver not allowed');
 		} elseif ($shareType === IShare::TYPE_CIRCLE) {
 			if (!\OC::$server->getAppManager()->isEnabledForUser('circles') || !class_exists('\OCA\Circles\ShareByCircleProvider')) {
 				throw new OCSNotFoundException($this->l->t('You cannot share to a Circle if the app is not enabled'));
@@ -1835,26 +1837,48 @@ class ShareAPIController extends OCSController {
 
 	private function submitShareInList($path, $permissions, $shareType, $shareWith, $expireDate, $note) {
 		$qb = $this->IDBConnection->getQueryBuilder();
-		$qb->insert('share_external_list')
-			->values(
-				[
-					'path' => '?',
-					'permissions' => '?',
-					'share_type' => '?',
-					'share_with' => '?',
-					'expire_date' => '?',
-					'note' => '?',
-					'from' => '?',
-				]
+		if (!$this->isExternalShareAlreadyExists($path, $permissions, $shareType, $shareWith, $expireDate, $note)){
+			$qb->insert('share_external_list')
+				->values(
+					[
+						'path' => '?',
+						'permissions' => '?',
+						'share_type' => '?',
+						'share_with' => '?',
+						'expire_date' => '?',
+						'note' => '?',
+						'from' => '?',
+					]
+				)
+				->setParameter(0, $path)
+				->setParameter(1, $permissions)
+				->setParameter(2, $shareType)
+				->setParameter(3, $shareWith)
+				->setParameter(4, $expireDate)
+				->setParameter(5, $note)
+				->setParameter(6, $this->currentUser)
+				->executeStatement();
+
+			return true;
+		}
+		return false;
+	}
+	private function isExternalShareAlreadyExists($path, $permissions, $shareType, $shareWith, $expireDate, $note){
+		$qb = $this->IDBConnection->getQueryBuilder();
+		return (bool) $qb->select("*")
+			->from("share_external_list")
+			->where(
+				$qb->expr()->andX(
+					$qb->expr()->eq('path', $qb->createNamedParameter($path)),
+					$qb->expr()->eq('permissions', $qb->createNamedParameter($permissions)),
+					$qb->expr()->eq('share_type', $qb->createNamedParameter($shareType)),
+					$qb->expr()->eq('share_with', $qb->createNamedParameter($shareWith)),
+					$qb->expr()->eq('expire_date', $qb->createNamedParameter($expireDate)),
+					$qb->expr()->eq('note', $qb->createNamedParameter($note)),
+					$qb->expr()->eq('from', $qb->createNamedParameter($this->currentUser)),
+				)
 			)
-			->setParameter(0, $path)
-			->setParameter(1, $permissions)
-			->setParameter(2, $shareType)
-			->setParameter(3, $shareWith)
-			->setParameter(4, $expireDate)
-			->setParameter(5, $note)
-			->setParameter(6, $this->currentUser)
-			->executeStatement();
+			->execute()->fetch();
 	}
 	/**
 	 * @return JSONResponse
@@ -1865,6 +1889,18 @@ class ShareAPIController extends OCSController {
 		return new JSONResponse(
 			[
 				'result' => $personalSettings->getFederationShares(),
+			]
+		);
+	}
+	/**
+	 * @return JSONResponse
+	 * @NoAdminRequired
+	 */
+	public function getFilteredFederationShareList($path) {
+		$personalSettings = \OC::$server->get(Personal::class);
+		return new JSONResponse(
+			[
+				'result' => $personalSettings->getFilteredFederationShares($path, $this->currentUser),
 			]
 		);
 	}

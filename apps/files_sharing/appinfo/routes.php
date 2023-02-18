@@ -208,6 +208,11 @@ return [
 			'verb' => 'GET',
 		],
 		[
+			'name' => 'ShareAPI#getFilteredFederationShareList',
+			'url' => '/api/v1/shares/federation_shares_list/index',
+			'verb' => 'POST',
+		],
+		[
 			'name' => 'ShareAPI#approveExternalShare',
 			'url' => '/api/v1/shares/approve_external_share',
 			'verb' => 'POST',

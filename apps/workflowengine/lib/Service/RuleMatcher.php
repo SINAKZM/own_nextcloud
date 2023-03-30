@@ -249,7 +249,7 @@ class RuleMatcher implements IRuleMatcher {
 			// Check is invalid
 			throw new \UnexpectedValueException($this->l->t('Check %s is invalid or does not exist', $check['class']));
 		}
-//		if ($this->isDownload()) {
+		if ($this->isDownload()) {
 			if ($checkInstance instanceof Download) {
 //				if (!$this->fileInfo['isDir']){
 					if ($this->fileInfo['path']){
@@ -265,7 +265,7 @@ class RuleMatcher implements IRuleMatcher {
 					}
 				}
 //			}
-//		}
+		}
 
 		return $checkInstance->executeCheck($check['operator'], $check['value']);
 	}

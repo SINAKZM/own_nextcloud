@@ -58,7 +58,6 @@ class Download implements ICheck {
 	 * @return bool
 	 */
 	public function executeCheck($operator, $value) {
-		if ($this->isDownload()) {
 			$value = Util::computerFileSize($value);
 			$size = $this->getFileSizeFromHeader();
 			if ($size !== false) {
@@ -74,8 +73,6 @@ class Download implements ICheck {
 				}
 			}
 			return false;
-		}
-		return false;
 	}
 
 	/**

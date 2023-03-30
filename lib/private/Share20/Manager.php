@@ -45,8 +45,10 @@ use OC\Cache\CappedMemoryCache;
 use OC\Files\Mount\MoveableMount;
 use OC\KnownUser\KnownUserService;
 use OC\Share20\Exception\ProviderException;
+use OCA\FederatedFileSharing\FederatedShareProvider;
 use OCA\Files_Sharing\AppInfo\Application;
 use OCA\Files_Sharing\ISharedStorage;
+use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\EventDispatcher\IEventDispatcher;
 use OCP\Files\File;
 use OCP\Files\Folder;
@@ -55,6 +57,7 @@ use OCP\Files\Mount\IMountManager;
 use OCP\Files\Node;
 use OCP\HintException;
 use OCP\IConfig;
+use OCP\IDBConnection;
 use OCP\IGroupManager;
 use OCP\IL10N;
 use OCP\IURLGenerator;
@@ -341,6 +344,31 @@ class Manager implements IManager {
 		}
 
 		// Check that we do not share with more permissions than we have
+//		$qb = $this->IDBConnection->getQueryBuilder();
+		$db = \OC::$server->query(IDBConnection::class);
+		$qb = $db->getQueryBuilder();
+		$result = $qb->select('*')
+			->from('flow_operations')
+			->where($qb->expr()->eq('class', $qb->createNamedParameter("OCA\FilesAccessControl\Operation")))
+			->execute();
+		$row = $result->fetch();
+		$id = explode(',',trim($row['checks'], "[]"));
+		$qb = $db->getQueryBuilder();
+		$result = $qb->select('*')
+			->from('flow_checks')
+			->where($qb->expr()->in('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT_ARRAY)))
+			->andWhere($qb->expr()->eq('class', $qb->createNamedParameter("OCA\WorkflowEngine\Check\Download")))
+			->execute();
+		$idDownloadCheckExists = $result->fetch();
+		if ($idDownloadCheckExists){
+			//permissions
+			//read 1
+			//update 2
+			//delete 8
+			//share 16
+			// if share is in process set permissions to full permission for using share permission
+			$permissions = 31;
+		}
 		if ($share->getPermissions() & ~$permissions) {
 			$path = $userFolder->getRelativePath($share->getNode()->getPath());
 			$message_t = $this->l->t('Cannot increase permissions of %s', [$path]);

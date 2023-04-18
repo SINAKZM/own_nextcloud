@@ -34,6 +34,7 @@ use OCP\WorkflowEngine\IComplexOperation;
 use OCP\WorkflowEngine\IManager;
 use OCP\WorkflowEngine\IRuleMatcher;
 use OCP\WorkflowEngine\ISpecificOperation;
+use phpDocumentor\Reflection\Types\False_;
 use ReflectionClass;
 use UnexpectedValueException;
 
@@ -66,7 +67,7 @@ class Operation implements IComplexOperation, ISpecificOperation {
 	 * @param bool $isDir
 	 * @throws ForbiddenException
 	 */
-	public function checkFileAccess(IStorage $storage, string $path, bool $isDir = false): void {
+	public function checkFileAccess(IStorage $storage, string $path, bool $isDir = false) {
 		if (!$this->isBlockablePath($storage, $path) || $this->isCreatingSkeletonFiles() || $this->nestingLevel !== 0) {
 			// Allow creating skeletons and theming
 			// https://github.com/nextcloud/files_accesscontrol/issues/5
@@ -106,10 +107,21 @@ class Operation implements IComplexOperation, ISpecificOperation {
 			if (!$idDownloadCheckExists){
 				throw new ForbiddenException('Access denied', false);
 			}
+			if ($_SERVER['REQUEST_METHOD'] == 'GET' and !$isDir){
+				throw new ForbiddenException('Access denied', false);
+			}
 			// while downloading a not matched file throw exception
 			if (isset($_REQUEST['downloadStartSecret'])){
-				throw new Exception('Access denied', 400);
+
+				if ($isDir){
+					// folder  on download
+					header('Location: '.$_SERVER['REQUEST_URI']);
+				}else{
+					throw new ForbiddenException('Access denied', false);
+				}
 			}
+
+//			throw new ForbiddenException('Access denied', false);
 		}
 	}
 
@@ -144,11 +156,7 @@ class Operation implements IComplexOperation, ISpecificOperation {
 			return true;
 		}
 
-		return isset($segment[2]) && in_array($segment[2], [
-			'files',
-			'thumbnails',
-			'files_versions',
-		]);
+		return isset($segment[2]) && in_array($segment[2], ['files', 'thumbnails', 'files_versions']);
 	}
 
 	/**

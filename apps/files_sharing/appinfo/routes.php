@@ -247,5 +247,10 @@ return [
 			'url' => '/api/v1/shares/user/search',
 			'verb' => 'GET',
 		],
+		[
+			'name' => 'ShareAPI#getUserGroups',
+			'url' => '/api/v1/shares/user/groups',
+			'verb' => 'GET',
+		],
 	],
 ];

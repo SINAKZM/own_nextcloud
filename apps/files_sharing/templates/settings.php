@@ -4,6 +4,7 @@ script('files_sharing', 'settings');
 /** @var array $_ */
 /** @var \OCP\IL10N $l */
 ?>
+<!--/var/www/html/own_nextcloud/apps/files_sharing/lib/Settings/Admin.php-->
 <div style="padding: 30px">
 	<h1><b>Federated Cloud Sharing Approval</b></h1>
 	<table class="styled-table">

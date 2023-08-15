@@ -94,6 +94,10 @@ export default {
 			type: Boolean,
 			required: true,
 		},
+		selectedGroup: {
+			type: String,
+			default: null,
+		},
 	},
 
 	data() {
@@ -479,6 +483,7 @@ export default {
 					password,
 					permissions: this.fileInfo.sharePermissions & OC.getCapabilities().files_sharing.default_permissions,
 					attributes: JSON.stringify(this.fileInfo.shareAttributes),
+					group: this.selectedGroup,
 				})
 
 				// If we had a password, we need to show it to the user as it was generated

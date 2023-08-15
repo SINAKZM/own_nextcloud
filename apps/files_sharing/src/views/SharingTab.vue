@@ -47,6 +47,7 @@
 				:link-shares="linkShares"
 				:reshare="reshare"
 				:shares="shares"
+				:selectedGroup="selected"
 				@add:share="addShare" />
 
 			<!-- link shares list -->
@@ -97,6 +98,12 @@
 			class="sharingTab__additionalContent">
 			<component :is="section($refs['section-'+index], fileInfo)" :file-info="fileInfo" />
 		</div>
+		<h3>share federation As</h3>
+		<select v-model="selected" style="width: 100%">
+			<option v-for="option in options" :key="option.value" :value="option.value">
+				{{ option.text }}
+			</option>
+		</select>
 	</div>
 </template>
 
@@ -136,6 +143,8 @@ export default {
 
 	data() {
 		return {
+			selected:null,
+			options:[],
 			config: new Config(),
 
 			error: '',
@@ -172,6 +181,16 @@ export default {
 	},
 
 	methods: {
+		getUserGroups(){
+			let self = this;
+			axios.get(generateUrl('/ocs/v2.php/apps/files_sharing/api/v1/shares/user/groups')).then(res=>{
+				res.data.result.forEach((element, index, array) => {
+					self.options.push({ text: element.gid, value: element.gid });
+				});
+			}).catch(err=> {
+				alert("something went wrong")
+			});
+		},
 		/**
 		 * Update current fileInfo and fetch new data
 		 *
@@ -384,6 +403,9 @@ export default {
 				alert("something is wrong")
 			});
 		}
+	},
+	created () {
+		this.getUserGroups();
 	}
 }
 </script>

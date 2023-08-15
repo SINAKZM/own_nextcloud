@@ -483,7 +483,8 @@ class ShareAPIController extends OCSController {
 		string $sendPasswordByTalk = null,
 		string $expireDate = '',
 		string $note = '',
-		string $label = ''
+		string $label = '',
+		string $group = null
 	): DataResponse {
 		$share = $this->shareManager->newShare();
 
@@ -632,7 +633,7 @@ class ShareAPIController extends OCSController {
 			$federationServer = $remoteData[1];
 			if ($this->isReceiverAllowed($shareType, $receiver, $federationServer)){
 				if ($this->isSenderAllowed()){
-					$submitShare = $this->submitShareInList($path, $permissions, $shareType, $shareWith, $expireDate, $note);
+					$submitShare = $this->submitShareInList($path, $permissions, $shareType, $shareWith, $expireDate, $note, $group);
 					if ($submitShare){
 						return new DataResponse(["result"=>"successfully shared"]);
 					}
@@ -1835,9 +1836,9 @@ class ShareAPIController extends OCSController {
 		}
 	}
 
-	private function submitShareInList($path, $permissions, $shareType, $shareWith, $expireDate, $note) {
+	private function submitShareInList($path, $permissions, $shareType, $shareWith, $expireDate, $note, $group) {
 		$qb = $this->IDBConnection->getQueryBuilder();
-		if (!$this->isExternalShareAlreadyExists($path, $permissions, $shareType, $shareWith, $expireDate, $note)){
+		if (!$this->isExternalShareAlreadyExists($path, $permissions, $shareType, $shareWith, $expireDate, $note, $group)){
 			$qb->insert('share_external_list')
 				->values(
 					[
@@ -1848,6 +1849,7 @@ class ShareAPIController extends OCSController {
 						'expire_date' => '?',
 						'note' => '?',
 						'from' => '?',
+						'as_group' => '?',
 					]
 				)
 				->setParameter(0, $path)
@@ -1857,6 +1859,7 @@ class ShareAPIController extends OCSController {
 				->setParameter(4, $expireDate)
 				->setParameter(5, $note)
 				->setParameter(6, $this->currentUser)
+				->setParameter(7, $group)
 				->executeStatement();
 
 			return true;
@@ -1948,6 +1951,20 @@ class ShareAPIController extends OCSController {
 		return new JSONResponse(
 			[
 				'result' => "success",
+			]
+		);
+	}
+	/**
+	 * @return JSONResponse
+	 *
+	 * @throws \OCP\DB\Exception
+	 *
+	 * @NoAdminRequired
+	 */
+	public function getUserGroups() {
+		return new JSONResponse(
+			[
+				'result' => $this->getGroupsOfCurrentUser(),
 			]
 		);
 	}

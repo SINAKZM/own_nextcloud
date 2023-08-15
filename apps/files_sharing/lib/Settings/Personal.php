@@ -101,6 +101,8 @@ class Personal implements ISettings {
 
 			$externalSharesList = $connection->getQueryBuilder()->select("*")
 				->from("share_external_list")
+				->where("as_group = :as_group")
+				->setParameter("as_group", $groupId)
 				->executeQuery()
 				->fetchAll();
 			foreach ($externalSharesList as $item) {

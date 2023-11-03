@@ -136,6 +136,13 @@ export default {
 			});
 		},
 	},
+	created () {
+		const mappedArray = this.federationShares.map(item => ({
+			...item,
+			created_at: new Date(item.created_at).toLocaleString(),
+		}));
+		this.federationShares = mappedArray;
+	}
 }
 </script>
 

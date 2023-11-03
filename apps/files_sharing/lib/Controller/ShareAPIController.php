@@ -1850,6 +1850,7 @@ class ShareAPIController extends OCSController {
 						'note' => '?',
 						'from' => '?',
 						'as_group' => '?',
+						'created_at' => '?',
 					]
 				)
 				->setParameter(0, $path)
@@ -1860,6 +1861,7 @@ class ShareAPIController extends OCSController {
 				->setParameter(5, $note)
 				->setParameter(6, $this->currentUser)
 				->setParameter(7, $group)
+				->setParameter(8, time())
 				->executeStatement();
 
 			return true;

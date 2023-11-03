@@ -46,6 +46,7 @@
 					<td>with</td>
 					<td>type</td>
 					<td>path</td>
+					<td>created At</td>
 					<td>check</td>
 				</tr>
 				<tr v-for="federationShare in federationShares">
@@ -55,6 +56,7 @@
 					<td v-if="federationShare.share_type == '6'">user</td>
 					<td v-else>group</td>
 					<td>{{federationShare.path}}</td>
+					<td>{{federationShare.created_at}}</td>
 					<td>
 						<button @click="approveFederationShare(federationShare.id)" class="ApproveCloudShare">Approve</button>
 						<button @click="rejectFederationShare(federationShare.id)" class="RejectCloudShare">Reject</button>
